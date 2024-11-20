@@ -1,77 +1,10 @@
 const { SlashCommandBuilder, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const path = require('path');
-const fs = require('fs');
-const { createCanvas, loadImage } = require('canvas'); // Import canvas library
 const recipes = require('./../../recipes.json');
-const items = require('./../../items.json');
-const translations = require('./../../fr.json');
+const { updatePlayerStats, updateStreak, insertPlayer} = require('./../../utility/SQLManager');
 
+const { getItemById, normalizeGrid, generateCraftingGrid, shuffleArray } = require('./../../utility/gameResources');
 
-// Path to images and grid template
-const IMAGES_FOLDER = path.join(__dirname, './../../Images');
-const GRID_TEMPLATE_PATH = path.join(__dirname, './../../Images/crafting_table_template.png'); 
-
-// Retrieve an item by its ID
-function getItemById(id) {
-    const item = items.find(item => item.id === id);
-    if (!item) {
-        return { displayName: 'item inconnu', name: 'unknown' }; // Default values for unknown items
-    }
-    const frenchName = translations[item.name] || item.displayName;
-    return {
-        ...item,
-        frenchDisplayName: frenchName,
-    };
-}
-
-// Normalize the grid to 3x3 format
-function normalizeGrid(inShape) {
-    const gridSize = 3;
-    const normalizedGrid = Array(gridSize).fill(null).map(() => Array(gridSize).fill(null));
-
-    for (let row = 0; row < inShape.length; row++) {
-        for (let col = 0; col < inShape[row].length; col++) {
-            normalizedGrid[row][col] = inShape[row][col] === undefined ? null : inShape[row][col];
-        }
-    }
-
-    return normalizedGrid;
-}
-
-// Generate the crafting grid image
-async function generateCraftingGrid(grid) {
-    const canvas = createCanvas(694, 694); // Canvas size matches crafting table
-    const ctx = canvas.getContext('2d');
-
-    // Load the crafting table template
-    const template = await loadImage(GRID_TEMPLATE_PATH);
-    ctx.drawImage(template, 0, 0, canvas.width, canvas.height);
-
-    // Constants for positioning items within the grid
-    const cellSize = 200; 
-    const borderSize = 25; 
-    const edgeOffsetX = 25; 
-    const edgeOffsetY = 25; 
-    const scaleFactor = 0.9; 
-    const scaledSize = cellSize * scaleFactor; 
-    const offset = (cellSize - scaledSize) / 2; 
-
-    // Draw each item's image on its corresponding grid position
-    for (let row = 0; row < grid.length; row++) {
-        for (let col = 0; col < grid[row].length; col++) {
-            const cell = grid[row][col];
-            if (cell && cell.imagePath) {
-                const img = await loadImage(cell.imagePath);
-                const x = edgeOffsetX + col * (cellSize + borderSize) + offset; 
-                const y = edgeOffsetY + row * (cellSize + borderSize) + offset; 
-                ctx.drawImage(img, x, y, scaledSize, scaledSize); 
-            }
-        }
-    }
-
-    return canvas.toBuffer(); // Return the generated image as a buffer
-}
-// Reuse existing functions: getItemById, normalizeGrid, and generateCraftingGrid
 
 
 module.exports = {
@@ -80,18 +13,71 @@ module.exports = {
         .setDescription('Start a crafting guessing duel!')
         .addUserOption(option =>
             option.setName('opponent')
-                .setDescription('Select a user to duel against.')
+                .setDescription('Choisir un joueur à defier.')
                 .setRequired(true)
         )
         .addIntegerOption(option =>
             option.setName('rounds')
-                .setDescription('The number of rounds for the duel (default is 5).')
+                .setDescription('Le nombre de round à jouer (défaut is 5).')
                 .setMinValue(1)
         ),
     async execute(interaction) {
         const opponent = interaction.options.getUser('opponent');
         const challenger = interaction.user;
         const totalRounds = interaction.options.getInteger('rounds') || 5;
+
+        insertPlayer(challenger.id, challenger.username);
+        insertPlayer(opponent.id, opponent.username);
+
+        const playerStats = {
+            [challenger.id]: {
+                playerId: challenger.id,
+                discordUsername: challenger.username,
+                totalGamesPlayed: 0,
+                totalWins : 0, // $4
+                totalLosses : 0, // $5
+                totalDraws : 0, // $6
+                currentWinStreak : 0, // $7
+                currentLossStreak : 0, // $8
+                longestWinStreak : 0, // $9
+                longestLossStreak : 0, // $10
+                totalRoundsPlayed : 0, // $11
+                totalLossesRounds : 0, // $12
+                totalDrawsRounds : 0, // $13
+                totalWinsRounds : 0, // $14
+                currentWinStreakRound : 0, // $15
+                currentLossStreakRound : 0, // $16
+                longestWinStreakRound : 0, // $17
+                longestLossStreakRound : 0, // $18
+                totalGuesses : 0, // $19
+                totalGoodGuesses : 0, // $20
+                totalBadGuesses : 0 // $21
+            },
+            [opponent.id]: {
+                playerId: opponent.id,
+                discordUsername: opponent.username,
+                totalGamesPlayed: 0,
+                totalWins : 0, // $4
+                totalLosses : 0, // $5
+                totalDraws : 0, // $6
+                currentWinStreak : 0, // $7
+                currentLossStreak : 0, // $8
+                longestWinStreak : 0, // $9
+                longestLossStreak : 0, // $10
+                totalRoundsPlayed : 0, // $11
+                totalLossesRounds : 0, // $12
+                totalDrawsRounds : 0, // $13
+                totalWinsRounds : 0, // $14
+                currentWinStreakRound : 0, // $15
+                currentLossStreakRound : 0, // $16
+                longestWinStreakRound : 0, // $17
+                longestLossStreakRound : 0, // $18
+                totalGuesses : 0, // $19
+                totalGoodGuesses : 0, // $20
+                totalBadGuesses : 0 // $21
+            },
+        };
+
 
         // Validate the opponent
         if (opponent.bot) {
@@ -172,14 +158,16 @@ module.exports = {
                 [challenger.id]: 0,
                 [opponent.id]: 0,
             };
-
+            playerStats[challenger.id].totalGamesPlayed++;
+            playerStats[opponent.id].totalGamesPlayed++;
             async function playRound(roundNumber) {
                 let selectedRecipe;
 
                 // Find a valid recipe
                 do {
                     const recipeKeys = Object.keys(recipes);
-                    const randomKey = recipeKeys[Math.floor(Math.random() * recipeKeys.length)];
+                    shuffleArray(recipeKeys); // Shuffle the keys before picking one
+                    const randomKey = recipeKeys[0]; // Pick the first shuffled key
                     selectedRecipe = recipes[randomKey][0];
                 } while (!selectedRecipe || !selectedRecipe.inShape);
 
@@ -219,25 +207,66 @@ module.exports = {
                         const guess = msg.content.toLowerCase();
                         const englishName = result.displayName.toLowerCase();
                         const frenchName = result.frenchDisplayName.toLowerCase();
+                        
 
                         if (guess === englishName || guess === frenchName) {
                             winner = msg.author;
                             scores[winner.id]++;
+
+                            playerStats[winner.id].totalGoodGuesses++;
+                            playerStats[winner.id].totalGuesses++;
+
+                            updateStreak(winner.id, "win", 1);
+
+                            playerStats[winner.id].totalWinsRounds++;
+                            playerStats[winner.id].currentWinStreakRound++;
+                            playerStats[winner.id].currentLossStreakRound = 0;
+ 
+                          
+                            const loserId = winner.id === challenger.id ? opponent.id : challenger.id;
+
+                            updateStreak(loserId, "lose", 1);
+                            playerStats[loserId].totalLossesRounds++;
+                            playerStats[loserId].currentLossStreakRound++;
+                            playerStats[loserId].currentWinStreakRound = 0;
+ 
+
                             collector.stop();
                         } else {
+
+                            playerStats[msg.author.id].totalBadGuesses++;
+                            playerStats[msg.author.id].totalGuesses++;
+
+
                             msg.reply({
                                 content: `❌ Mauvais choix ! "${guess}" n’est pas le bon item.`,
                             }).then((reply) => setTimeout(() => reply.delete(), 5000));
+                        
                         }
                     });
 
                     return new Promise((resolve) => {
                         collector.on('end', async (_, reason) => {
+
+                            playerStats[challenger.id].totalRoundsPlayed++;
+                            playerStats[opponent.id].totalRoundsPlayed++;
+
                             if (reason === 'time') {
+         
+                            
+                                updateStreak(challenger.id, "lose", 1);
+                                updateStreak(opponent.id, "lose", 1);
+                                
+                                playerStats[challenger.id].currentWinStreakRound = 0;
+                                playerStats[opponent.id].currentWinStreakRound = 0;
+                                playerStats[challenger.id].currentLossStreakRound += 1;
+                                playerStats[opponent.id].currentLossStreakRound += 1;
+
                                 await interaction.channel.send({
                                     content: `⏰ Temps écoulé ! Aucun point marqué. La réponse correcte était **${result.frenchDisplayName}** (${result.displayName}).`,
                                 });
                             } else if (winner) {
+
                                 await interaction.channel.send({
                                     content: `🎉 ${winner} a gagné cette manche ! L'item était **${result.frenchDisplayName}** (${result.displayName}).`,
                                 });
@@ -260,18 +289,48 @@ module.exports = {
             const challengerScore = scores[challenger.id];
             const opponentScore = scores[opponent.id];
 
+            
+
+
             let resultMessage;
             if (challengerScore > opponentScore) {
+                playerStats[challenger.id].totalWins++;
+                playerStats[challenger.id].currentWinStreak++;
+                playerStats[challenger.id].currentLossStreak = 0;
+
+                playerStats[opponent.id].totalLosses++;
+                playerStats[opponent.id].currentLossStreak++;
+                playerStats[opponent.id].currentWinStreak = 0;
                 resultMessage = `🎉 ${challenger} a remporté le duel avec un score de **${challengerScore}** contre **${opponentScore}** !`;
             } else if (opponentScore > challengerScore) {
+                playerStats[opponent.id].totalWins++;
+                playerStats[opponent.id].currentWinStreak++;
+                playerStats[opponent.id].currentLossStreak = 0;
+
+                playerStats[challenger.id].totalLosses++;
+                playerStats[challenger.id].currentLossStreak++;
+                playerStats[challenger.id].currentWinStreak = 0;
+
                 resultMessage = `🎉 ${opponent} a remporté le duel avec un score de **${opponentScore}** contre **${challengerScore}** !`;
             } else {
+                playerStats[challenger.id].totalDraws++;
+                playerStats[opponent.id].totalDraws++;
+
                 resultMessage = `🤝 C'est une égalité ! Les deux joueurs ont marqué **${challengerScore}** points.`;
             }
 
             await interaction.channel.send({
                 content: resultMessage,
             });
+
+           // Determine the result for the challenger and opponent
+            const challengerResult = challengerScore > opponentScore ? 'win' : challengerScore < opponentScore ? 'lose' : 'draw';
+            const opponentResult = opponentScore > challengerScore ? 'win' : opponentScore < challengerScore ? 'lose' : 'draw';
+
+            
+            // Update stats for both players
+            await updatePlayerStats(challenger.id, playerStats[challenger.id].discordUsername, playerStats[challenger.id], challengerResult);
+            await updatePlayerStats(opponent.id, playerStats[opponent.id].discordUsername, playerStats[opponent.id], opponentResult);
         });
     },
 };

@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
+const { Client, Collection, Events, GatewayIntentBits, ActivityType} = require('discord.js');
 const { token } = require('./config.json');
 
 const client = new Client({ 
@@ -31,11 +31,37 @@ for (const folder of commandFolders) {
 	}
 }
 
-// When the client is ready, run this code (only once).
+
+
+const activities = [
+    { name: 'Crafting Items | /help', type: ActivityType.Playing },
+    { name: '/help', type: ActivityType.Playing },
+    { name: 'En Recherche de craft', type: ActivityType.Playing  },
+	{ name: '/help', type: ActivityType.Playing },
+];
+
+let currentActivity = 0;
+
 // The distinction between `client: Client<boolean>` and `readyClient: Client<true>` is important for TypeScript developers.
 // It makes some properties non-nullable.
-client.once(Events.ClientReady, readyClient => {
-	console.log(`Ready! Logged in as ${readyClient.user.tag}`);
+client.once('ready', () => {
+    console.log(`Logged in as ${client.user.tag}!`);
+
+    // Set initial activity
+    client.user.setActivity(activities[currentActivity].name, {
+        type: activities[currentActivity].type,
+        url: activities[currentActivity].url || null,
+    });
+
+
+    setInterval(() => {
+        currentActivity = (currentActivity + 1) % activities.length; // Move to the next activity
+        const activity = activities[currentActivity];
+        client.user.setActivity(activity.name, {
+            type: activity.type,
+            url: activity.url || null,
+        });
+    }, 15000);
 });
 
 
