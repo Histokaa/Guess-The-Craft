@@ -23,7 +23,7 @@ module.exports = {
 \`\`\`
 /guess
 \`\`\`
-**Astuce :** Devinez le craft basé sur les indices fournis. Bonne chance !`,
+*Devinez le craft basé sur les indices fournis. Bonne chance !*`,
                 },
                 {
                     name: '⚔️ **/duel**',
@@ -37,7 +37,7 @@ module.exports = {
 \`\`\`
 /duel @Joueur
 \`\`\`
-**Astuce :** Préparez-vous pour le duel, car il ne peut y avoir qu\'un seul gagnant !`,
+*Préparez-vous pour le duel, car il ne peut y avoir qu\'un seul gagnant !*`,
                 },
                 {
                     name: '🏰 **/room**',
@@ -51,7 +51,26 @@ module.exports = {
 \`\`\`
 /room 4 5
 \`\`\`
-**Astuce :** Invitez vos amis à rejoindre votre salle, puis lancez la partie lorsque tout le monde est prêt !`,
+*Invitez vos amis à rejoindre votre salle, puis lancez la partie lorsque tout le monde est prêt !*`,
+                },
+                {
+                    name: '📊 **/leaderboard**',
+                    value: 
+`**Description :** Affiche le classement des joueurs selon plusieurs catégories.
+
+**Utilisation :**
+- \`/leaderboard\` - Affiche le classement général.
+
+**Navigation :**
+- Utilisez les boutons pour changer de page (⬆️, ⬇️) ou de catégorie (⬅️, ➡️).
+
+**Catégories :**
+- 🏆 Victoires
+- 💔 Défaites
+- 🔥 Séries de victoires
+- 💀 Séries de défaites
+
+*Consultez votre position et rivalisez pour grimper dans le classement !*`,
                 }
             )
             .setFooter({
