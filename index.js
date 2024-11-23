@@ -36,8 +36,7 @@ for (const folder of commandFolders) {
 const activities = [
     { name: 'Crafting Items | /help', type: ActivityType.Playing },
     { name: '/help', type: ActivityType.Playing },
-    { name: 'En Recherche de craft', type: ActivityType.Playing  },
-	{ name: '/help', type: ActivityType.Playing },
+    { name: '/room, /duel', type: ActivityType.Playing  },
 ];
 
 let currentActivity = 0;
