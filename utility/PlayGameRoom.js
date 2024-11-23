@@ -10,12 +10,13 @@ const { updatePlayerStats, updateStreak, insertPlayer} = require('./SQLManager')
 
 // Game logic adapted for /room
 async function playGame(roomData, interaction) {
-    const { players, rounds } = roomData;
+    const { players, rounds, thread } = roomData;
     const scores = {};
     let playerStats = {};
+
     players.forEach(player => {
         insertPlayer(player.id, player.username);
-        scores[player.id] = 0; // Initialize scores for each player
+        scores[player.id] = 0;
         playerStats[player.id] = {
             playerId: player.id,
             discordUsername: player.username,
@@ -44,7 +45,7 @@ async function playGame(roomData, interaction) {
     players.forEach(player => {
         playerStats[player.id].totalGamesPlayed++; // Increment total games played for each player
     });
-
+    await new Promise(resolve => setTimeout(resolve, 5000));
     for (let i = 1; i <= rounds; i++) {
         let selectedRecipe;
 
@@ -74,7 +75,7 @@ async function playGame(roomData, interaction) {
             const gridImageBuffer = await generateCraftingGrid(inShapeWithNamesAndImages);
             const gridAttachment = new AttachmentBuilder(gridImageBuffer, { name: 'crafting_grid.png' });
 
-            const roundMessage = await interaction.channel.send({
+            const roundMessage = await thread.send({
                 content: `🎮 **Manche ${i}/${rounds}:** Trouvez l’item correspondant à cette recette. Premier à répondre gagne !`,
                 files: [gridAttachment],
             });
@@ -133,11 +134,11 @@ async function playGame(roomData, interaction) {
                             playerStats[player.id].currentWinStreakRound = 0;
                             playerStats[player.id].currentLossStreakRound += 1;
                         });
-                        await interaction.channel.send({
+                        await thread.send({
                             content: `⏰ Temps écoulé ! Aucun point marqué. La réponse correcte était **${result.frenchDisplayName}** (${result.displayName}).`,
                         });
                     } else if (winner) {
-                        await interaction.channel.send({
+                        await thread.send({
                             content: `🎉 ${winner} a gagné cette manche ! L'item était **${result.frenchDisplayName}** (${result.displayName}).`,
                         });
                     }
@@ -147,9 +148,12 @@ async function playGame(roomData, interaction) {
 
         } catch (error) {
             console.error('Error generating crafting grid:', error);
-            await interaction.channel.send({
+            await thread.send({
                 content: '❌ Une erreur est survenue lors de la génération de la grille de craft.',
             });
+        }
+        if (i < rounds) {
+            await new Promise(resolve => setTimeout(resolve, 3000));
         }
     }
 
@@ -225,4 +229,4 @@ async function playGame(roomData, interaction) {
 
 }
 
-module.exports = { /* Add this as a handler in your /room command */ playGame };
+module.exports = {  playGame };
