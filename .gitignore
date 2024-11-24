@@ -3,4 +3,3 @@ node_modules
 config.json
 GuessTheCraftBackup
 .eslintrc.json
-deploy-commands.js
