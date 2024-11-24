@@ -34,14 +34,14 @@ const rest = new REST().setToken(token);
 
         // Clear existing commands first
         await rest.put(
-            Routes.applicationGuildCommands(clientId, guildId),
+            Routes.applicationCommands(clientId),
             { body: [] }
         );
         console.log("Cleared existing guild commands.");
 
         // The put method is used to fully refresh all commands in the guild with the current set
         const data = await rest.put(
-            Routes.applicationGuildCommands(clientId, guildId),
+            Routes.applicationCommands(clientId),
             { body: commands }
         );
 
