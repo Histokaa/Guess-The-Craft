@@ -169,6 +169,12 @@ async function updatePlayerStats(playerId, discordUsername, stats, gameWinOrLose
     stats.totalBadGuesses || 0 // $21
   ];
 
+
+  console.log("total guesses to add to player: " + stats.discordUsername+" : " + stats.totalGuesses);
+  console.log("total good guesses to add to player: " + stats.discordUsername+" : " + stats.totalGoodGuesses);
+  console.log("total bad guesses to add to player: " + stats.discordUsername+" : " + stats.totalBadGuesses);
+
+
   await connectToDatabase();
 
   try {
@@ -225,7 +231,8 @@ async function updateStreak(playerId, WinOrLose, number) {
               SET 
                   longest_win_streak_round = $1,
                   current_win_streak_round = players.current_win_streak_round + 1,
-                  current_loss_streak_round = 0
+                  current_loss_streak_round = 0,
+                  total_wins_rounds = players.total_wins_rounds + 1
               WHERE player_id = $2;
           `;
           console.log(`Updated longest win streak to ${updatedWinStreakRound}`);
@@ -235,7 +242,8 @@ async function updateStreak(playerId, WinOrLose, number) {
               UPDATE players
               SET 
                   current_win_streak_round = $1,
-                  current_loss_streak_round = 0
+                  current_loss_streak_round = 0,
+                  total_wins_rounds = players.total_wins_rounds + 1
               WHERE player_id = $2;
           `;
           console.log(`Updated current win streak to ${updatedWinStreakRound}`);
@@ -256,7 +264,8 @@ async function updateStreak(playerId, WinOrLose, number) {
               SET 
                   longest_loss_streak_round = $1,
                   current_loss_streak_round = players.current_loss_streak_round + 1,
-                  current_win_streak_round = 0
+                  current_win_streak_round = 0,
+                  total_losses_rounds = players.total_losses_rounds + 1
               WHERE player_id = $2;
           `;
           console.log(`Updated longest loss streak to ${updatedLossStreakRound}`);
@@ -266,7 +275,8 @@ async function updateStreak(playerId, WinOrLose, number) {
               UPDATE players
               SET 
                   current_loss_streak_round = $1,
-                  current_win_streak_round = 0
+                  current_win_streak_round = 0,
+                  total_losses_rounds = players.total_losses_rounds + 1
               WHERE player_id = $2;
           `;
           console.log(`Updated current loss streak to ${updatedLossStreakRound}`);

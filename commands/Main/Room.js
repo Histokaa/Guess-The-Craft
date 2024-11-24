@@ -1,7 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { playGame } = require('./../../utility/PlayGameRoom.js'); // Importer la fonction playGame
-const { generateCraftingGrid } = require('./../../utility/gameResources.js'); // Importer la fonction generateCraftingGrid
-const recipes = require('./../../recipes.json'); // Importer les recettes
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('room')
@@ -24,18 +23,7 @@ module.exports = {
         const players = [creator];
         let thread;
 
-        // Check if the interaction is in a thread
-        if (interaction.channel.isThread()) {
-            thread = interaction.channel;
-        } else {
-            // Create a new thread for the game
-            thread = await interaction.channel.threads.create({
-                name: `Salle de ${creator.username}`,
-                autoArchiveDuration: 60,
-                reason: 'Salle de jeu pour les joueurs de crafting',
-            });
-        }
-
+       
         // Create the embed for the room
         const embed = new EmbedBuilder()
             .setTitle(`Salle de ${creator.username}`)
@@ -58,23 +46,36 @@ module.exports = {
             .setStyle(ButtonStyle.Success);
 
         const actionRow = new ActionRowBuilder().addComponents(joinButton, leaveButton, startButton);
+        await interaction.reply({ content: 'Salle créée !', ephemeral: true }); // Quick acknowledgment
+
+        const channelMessage = await interaction.channel.send({
+            embeds: [embed],
+            components: [actionRow],
+        });
+
+
+        // Check if the interaction is in a thread
+        if (interaction.channel.isThread()) {
+            thread = interaction.channel;
+        } else {
+            // Create a new thread for the game
+            thread = await interaction.channel.threads.create({
+                name: `Salle de ${creator.username}`,
+                autoArchiveDuration: 60,
+                reason: 'Salle de jeu pour les joueurs de crafting',
+            });
+        }
+
 
         // Send the embed to the thread
         const threadMessage = await thread.send({
             embeds: [embed],
             components: [actionRow],
         });
-
-        // Send the same embed to the main channel
-        const channelMessage = await interaction.channel.send({
-            embeds: [embed],
-            components: [actionRow],
-        });
-
         // Store message IDs to track them
         const messages = {
-            threadMessageId: threadMessage.id,
             channelMessageId: channelMessage.id,
+            threadMessageId: threadMessage.id,
         };
 
         // Create a filter for the buttons
@@ -83,8 +84,9 @@ module.exports = {
             i.customId.startsWith(`start-${roomId}`);
 
         // Collect interactions from both the thread and the channel
-        const collectorChannel = interaction.channel.createMessageComponentCollector({ filter, time: 60 * 3 * 1000 });
-        const collectorThread = thread.createMessageComponentCollector({ filter, time: 60 * 3 * 1000 });
+
+        const collectorChannel = interaction.channel.createMessageComponentCollector({ filter, time: 60 * 1 * 1000 });
+        const collectorThread = thread.createMessageComponentCollector({ filter, time: 60 * 1 * 1000 });
         let gameStarted = false; // Flag to track if the game started
         const handleButtonInteraction = async (buttonInteraction) => {
             const user = buttonInteraction.user;
@@ -179,11 +181,22 @@ module.exports = {
                 content: messageContent,
                 components: [new ActionRowBuilder().addComponents(joinButton, leaveButton, startButton)],
             });
+
+
         
             await channelMessage.edit({
                 content: messageContent,
                 components: [new ActionRowBuilder().addComponents(joinButton, leaveButton, startButton)],
             });
+
+            if(!gameStarted)
+            {
+                await thread.delete();
+                await channelMessage.delete();
+            }
+                
+            
+
         });
     },
 };

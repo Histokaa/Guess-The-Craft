@@ -99,16 +99,10 @@ async function playGame(roomData, interaction) {
                     playerStats[winner.id].totalGoodGuesses++;
                     playerStats[winner.id].totalGuesses++;
                     updateStreak(winner.id, "win", 1);
-                    playerStats[winner.id].totalWinsRounds++;
-                    playerStats[winner.id].currentWinStreakRound++;
-                    playerStats[winner.id].currentLossStreakRound = 0;
             
                     players.forEach(player => {
                         if (player.id !== winner.id) {
                             updateStreak(player.id, "lose", 1);
-                            playerStats[player.id].totalLossesRounds++;
-                            playerStats[player.id].currentLossStreakRound++;
-                            playerStats[player.id].currentWinStreakRound = 0;
                         }
                     });
             
@@ -131,8 +125,6 @@ async function playGame(roomData, interaction) {
                     if (reason === 'time') {
                         players.forEach(player => {
                             updateStreak(player.id, "lose", 1);
-                            playerStats[player.id].currentWinStreakRound = 0;
-                            playerStats[player.id].currentLossStreakRound += 1;
                         });
                         await thread.send({
                             content: `⏰ Temps écoulé ! Aucun point marqué. La réponse correcte était **${result.frenchDisplayName}** (${result.displayName}).`,
@@ -167,16 +159,11 @@ async function playGame(roomData, interaction) {
     // Check if there is a single winner or a tie
     if (topPlayers.length === 1) {
         const winnerId = topPlayers[0][0];
-        playerStats[winnerId].totalWins++;
-        playerStats[winnerId].currentWinStreak++;
-        playerStats[winnerId].currentLossStreak = 0;
 
         // Update stats for other players
         players.forEach(player => {
             if (player.id !== winnerId) {
                 playerStats[player.id].totalLosses++;
-                playerStats[player.id].currentLossStreak++;
-                playerStats[player.id].currentWinStreak = 0;
             }
         });
 
@@ -202,6 +189,7 @@ async function playGame(roomData, interaction) {
             // It's a draw
             await updatePlayerStats(playerId, playerStats[playerId].discordUsername, playerStats[playerId], 'draw');
         } else if (playerScore === topScore) {
+            playerStats[playerId].totalWins++;
             // It's a win
             await updatePlayerStats(playerId, playerStats[playerId].discordUsername, playerStats[playerId], 'win');
         } else {
@@ -236,7 +224,8 @@ async function playGame(roomData, interaction) {
         content: `🎉 **Fin du jeu ! Résultats:**\n${results}\n\n🎉 **Gagnant:** <@${winnerId}>`,
     });
 
-
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    await thread.delete();
 }
 
 module.exports = {  playGame };
