@@ -92,10 +92,10 @@ module.exports = {
 
             if (buttonInteraction.customId === `join-${roomId}`) {
                 if (players.length >= maxPlayers) {
-                    return buttonInteraction.reply({ content: '❌ La salle est pleine !', ephemeral: true });
+                    return await buttonInteraction.reply({ content: '❌ La salle est pleine !', ephemeral: true });
                 }
                 if (players.some(player => player.id === user.id)) {
-                    return buttonInteraction.reply({ content: '❌ Vous êtes déjà dans la salle !', ephemeral: true });
+                    return await buttonInteraction.reply({ content: '❌ Vous êtes déjà dans la salle !', ephemeral: true });
                 }
 
                 players.push(user);
@@ -126,7 +126,7 @@ module.exports = {
 
             if (buttonInteraction.customId === `start-${roomId}`) {
                 if (players.length < 2) {
-                    return buttonInteraction.reply({ content: '❌ Pas assez de joueurs pour commencer la partie !', ephemeral: true });
+                    return await buttonInteraction.reply({ content: '❌ Pas assez de joueurs pour commencer la partie !', ephemeral: true });
                 }
         
                 gameStarted = true;

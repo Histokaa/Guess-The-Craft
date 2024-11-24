@@ -197,9 +197,19 @@ async function playGame(roomData, interaction) {
 
     // Update stats for all players based on results
     for (const playerId in playerStats) {
-        const playerResult = sortedScores.find(([id, score]) => id === playerId)[1] === topScore ? 'win' : 'draw';
-        await updatePlayerStats(playerId, playerStats[playerId].discordUsername, playerStats[playerId], playerResult);
+        const playerScore = sortedScores.find(([id, score]) => id === playerId)[1];
+        if (playerScore === topScore && topPlayers.length > 1) {
+            // It's a draw
+            await updatePlayerStats(playerId, playerStats[playerId].discordUsername, playerStats[playerId], 'draw');
+        } else if (playerScore === topScore) {
+            // It's a win
+            await updatePlayerStats(playerId, playerStats[playerId].discordUsername, playerStats[playerId], 'win');
+        } else {
+            // It's a loss
+            await updatePlayerStats(playerId, playerStats[playerId].discordUsername, playerStats[playerId], 'lose');
+        }
     }
+
 
     // Collect results for the game summary with top 3 places
     let results = sortedScores.map(([index, score], i) => {
